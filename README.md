@@ -3,9 +3,9 @@
 
 This project is a backend REST API for a mock banking system. It manages accounts, deposits, withdrawals, and transfers using a double–entry ledger stored in PostgreSQL. The design ensures every money movement is tracked with balanced debit/credit entries and that account balances never go negative.
 
----
-
 ## 1. Project Overview
+
+The API:
 
 - Implements a simple financial ledger suitable for a small banking or wallet system.
 - Uses three core tables:
@@ -17,53 +17,47 @@ This project is a backend REST API for a mock banking system. It manages account
   - Depositing money into a single account.
   - Withdrawing money from a single account with insufficient‑funds protection.
   - Transferring money between two accounts using double‑entry bookkeeping.
-- All money operations run inside explicit database transactions to provide ACID guarantees.
-
----
+- Runs all money operations inside explicit database transactions to provide ACID guarantees.
 
 ## 2. Project Structure
 
 The repository is organized as follows:
 
-- **`index.js`**  
+- `index.js`  
   Main Express application. Defines all HTTP routes, request validation, and error handling. Wraps each money operation in a PostgreSQL transaction.
 
-- **`db.js`**  
+- `db.js`  
   Database configuration using `pg` (node‑postgres). Creates and exports a connection pool based on environment variables.
 
-- **`api-design.md`**  
+- `api-design.md`  
   Design document for the REST API: endpoints, request/response shapes, and business rules.
 
-- **`design_tables.md`**  
+- `design_tables.md`  
   Notes for the database schema: table definitions, columns, and constraints.
 
-- **`README.md`**  
+- `README.md`  
   This document. Explains how to set up, run, and understand the project.
 
-- **`Untitled Diagram.drawio.png`**  
+- `Untitled Diagram.drawio.png`  
   Entity Relationship Diagram (ERD) showing `accounts`, `transactions`, and `ledger_entries` tables and their foreign‑key relationships.
 
-- **`Untitled Diagram2.drawio.png`**  
+- `Untitled Diagram2.drawio.png`  
   High‑level architecture diagram showing how the client, Node.js API, and PostgreSQL (Docker) interact.
 
-- **`postman/Financial-Ledger-API.postman_collection.json`**  
+- `postman/Financial-Ledger-API.postman_collection.json`  
   Postman collection with ready‑made requests to test all endpoints.
 
-- **`package.json`, `package-lock.json`**  
+- `package.json`, `package-lock.json`  
   Node.js dependencies and npm scripts.
-
----
 
 ## 3. Tech Stack
 
-- Node.js
-- Express (REST API framework)
-- PostgreSQL (relational database)
-- Docker (for running PostgreSQL locally)
-- `pg` (node‑postgres) for database access
-- `dotenv` for reading environment variables
-
----
+- Node.js  
+- Express (REST API framework)  
+- PostgreSQL (relational database)  
+- Docker (for running PostgreSQL locally)  
+- `pg` (node‑postgres) for database access  
+- `dotenv` for reading environment variables  
 
 ## 4. Setup and Running Locally
 
@@ -137,8 +131,6 @@ The API will listen on:
 http://localhost:3000
 ```
 
----
-
 ## 5. Domain and Data Model
 
 ### 5.1 Accounts table
@@ -184,11 +176,7 @@ http://localhost:3000
   - `entry_type` – `debit` or `credit`.
   - `amount` – positive numeric amount.
   - `created_at` – timestamp.
-- Balance for a given account is computed as:
-
-> total of all credit amounts minus total of all debit amounts
-
----
+- Balance for a given account is computed as total credits minus total debits.
 
 ## 6. API Endpoints
 
@@ -267,8 +255,6 @@ Base URL: `http://localhost:3000`
   - If the source would go negative, roll back and return HTTP `422`.
   - Otherwise, mark the transaction as `completed` and commit.
 
----
-
 ## 7. Business Rules and Error Handling
 
 ### 7.1 Core business rules
@@ -289,8 +275,6 @@ Base URL: `http://localhost:3000`
   - `500` – unexpected server or database error.
 - Error responses contain a JSON message describing the problem.
 
----
-
 ## 8. Transactions, ACID, and Isolation
 
 - Each money‑related endpoint (`/deposits`, `/withdrawals`, `/transfers`) opens a PostgreSQL transaction using:
@@ -302,8 +286,6 @@ Base URL: `http://localhost:3000`
   - **Consistency** – foreign keys and validation checks guarantee that only valid account and ledger states are stored.
   - **Isolation** – relies on PostgreSQL’s default `READ COMMITTED` level so that no request sees uncommitted data from another.
   - **Durability** – once a transaction is committed, PostgreSQL persists it to disk.
-
----
 
 ## 9. Testing with Postman
 
@@ -319,14 +301,11 @@ The repository includes a ready‑to‑use Postman collection:
 
 ### 9.2 Recommended test flow
 
-1. Call `GET /health` to confirm the API and database are running.
-2. Create two accounts using the `POST /accounts` requests.
-3. Deposit money into account `1` using `POST /deposits`.
-4. Perform a successful withdrawal from account `1`.
-5. Try a large withdrawal from account `1` and verify that it fails with HTTP `422`.
-6. Perform a transfer from account `1` to account `2` and verify:
-   - account `1` is debited,
-   - account `2` is credited,
-   - balances and ledger entries match expectations.
+1. Call `GET /health` to confirm the API and database are running.  
+2. Create two accounts using the `POST /accounts` requests.  
+3. Deposit money into account `1` using `POST /deposits`.  
+4. Perform a successful withdrawal from account `1`.  
+5. Try a large withdrawal from account `1` and verify that it fails with HTTP `422`.  
+6. Perform a transfer from account `1` to account `2` and verify that balances and ledgers are updated correctly.  
 7. Fetch final account details and ledgers using `GET /accounts/:id` and `GET /accounts/:id/ledger`.
 ```
