@@ -1,44 +1,86 @@
-Here is a ready-to-edit **README.md** template tailored to your project. You can copy–paste this into `README.md` and then adjust wording if you like. 
-
-***
-
 ```md
-# Financial Ledger API with Double-Entry Bookkeeping
+# Financial Ledger API (Node.js + PostgreSQL)
 
-## Overview
-
-This project is a backend REST API for a mock banking system that implements **double-entry bookkeeping** on top of a relational database. It tracks accounts, deposits, withdrawals, and transfers, ensuring that every movement of money is represented by balanced debit and credit ledger entries and that account balances never go negative. [web:90][web:91]
-
-The API is built with **Node.js + Express** and uses **PostgreSQL** running in a Docker container for strong ACID guarantees and data integrity. [web:16][web:74][web:94]
+This project is a backend REST API for a mock banking system. It manages accounts, deposits, withdrawals, and transfers using a double–entry ledger stored in PostgreSQL. The design ensures every money movement is tracked with balanced debit/credit entries and that account balances never go negative.
 
 ---
 
-## Tech Stack
+## 1. Project Overview
 
-- Node.js & Express (REST API)
+- Implements a simple financial ledger suitable for a small banking or wallet system.
+- Uses three core tables:
+  - `accounts` – represents user bank accounts.
+  - `transactions` – represents high‑level business operations.
+  - `ledger_entries` – immutable debit/credit entries linked to transactions.
+- Supports:
+  - Creating accounts for different users and account types.
+  - Depositing money into a single account.
+  - Withdrawing money from a single account with insufficient‑funds protection.
+  - Transferring money between two accounts using double‑entry bookkeeping.
+- All money operations run inside explicit database transactions to provide ACID guarantees.
+
+---
+
+## 2. Project Structure
+
+The repository is organized as follows:
+
+- **`index.js`**  
+  Main Express application. Defines all HTTP routes, request validation, and error handling. Wraps each money operation in a PostgreSQL transaction.
+
+- **`db.js`**  
+  Database configuration using `pg` (node‑postgres). Creates and exports a connection pool based on environment variables.
+
+- **`api-design.md`**  
+  Design document for the REST API: endpoints, request/response shapes, and business rules.
+
+- **`design_tables.md`**  
+  Notes for the database schema: table definitions, columns, and constraints.
+
+- **`README.md`**  
+  This document. Explains how to set up, run, and understand the project.
+
+- **`Untitled Diagram.drawio.png`**  
+  Entity Relationship Diagram (ERD) showing `accounts`, `transactions`, and `ledger_entries` tables and their foreign‑key relationships.
+
+- **`Untitled Diagram2.drawio.png`**  
+  High‑level architecture diagram showing how the client, Node.js API, and PostgreSQL (Docker) interact.
+
+- **`postman/Financial-Ledger-API.postman_collection.json`**  
+  Postman collection with ready‑made requests to test all endpoints.
+
+- **`package.json`, `package-lock.json`**  
+  Node.js dependencies and npm scripts.
+
+---
+
+## 3. Tech Stack
+
+- Node.js
+- Express (REST API framework)
 - PostgreSQL (relational database)
-- Docker (database container)
-- node-postgres (`pg`) for database access
-- dotenv for configuration [web:16][web:80][web:85]
+- Docker (for running PostgreSQL locally)
+- `pg` (node‑postgres) for database access
+- `dotenv` for reading environment variables
 
 ---
 
-## Setup and Running Locally
+## 4. Setup and Running Locally
 
-### Prerequisites
+### 4.1 Prerequisites
 
 - Node.js and npm installed.
-- Docker Desktop installed and running. [web:31][web:34]
+- Docker Desktop installed and running.
 
-### 1. Clone and install dependencies
+### 4.2 Clone and install dependencies
 
 ```
-git clone <your-repo-url>
+git clone https://github.com/GowthamiAkula/financial-ledger-api.git
 cd financial-ledger-api
 npm install
 ```
 
-### 2. Start PostgreSQL in Docker
+### 4.3 Start PostgreSQL in Docker
 
 ```
 docker run --name ledger-postgres \
@@ -49,11 +91,11 @@ docker run --name ledger-postgres \
   -d postgres
 ```
 
-This starts a local PostgreSQL instance on port 5432 with a dedicated database for the ledger. [web:74][web:75]
+This starts a PostgreSQL instance on port 5432 with database `ledger_db`.
 
-### 3. Environment variables
+### 4.4 Configure environment variables
 
-Create a `.env` file in the project root:
+Create a file named `.env` in the project root:
 
 ```
 DB_HOST=localhost
@@ -63,199 +105,228 @@ DB_PASSWORD=ledger_password
 DB_NAME=ledger_db
 ```
 
-The API reads these variables using `dotenv` and uses them to configure the PostgreSQL connection pool. [web:80][web:85]
+### 4.5 Create the database tables
 
-### 4. Run database migrations (tables)
-
-Connect to the database inside the container:
+Connect to the running container:
 
 ```
 docker exec -it ledger-postgres psql -U ledger_user -d ledger_db
 ```
 
-Create the tables:
+Create the three tables using the SQL from `design_tables.md`:
+
+- `accounts`
+- `transactions`
+- `ledger_entries`
+
+Exit `psql` with:
 
 ```
-CREATE TABLE accounts (
-  id SERIAL PRIMARY KEY,
-  user_id VARCHAR(100) NOT NULL,
-  type VARCHAR(50) NOT NULL,
-  currency VARCHAR(10) NOT NULL,
-  status VARCHAR(20) NOT NULL DEFAULT 'active'
-);
-
-CREATE TABLE transactions (
-  id SERIAL PRIMARY KEY,
-  type VARCHAR(20) NOT NULL,
-  amount NUMERIC(14,2) NOT NULL,
-  currency VARCHAR(10) NOT NULL,
-  source_account_id INTEGER,
-  destination_account_id INTEGER,
-  status VARCHAR(20) NOT NULL DEFAULT 'pending',
-  description TEXT,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  CONSTRAINT fk_source_account
-    FOREIGN KEY (source_account_id) REFERENCES accounts(id),
-  CONSTRAINT fk_destination_account
-    FOREIGN KEY (destination_account_id) REFERENCES accounts(id)
-);
-
-CREATE TABLE ledger_entries (
-  id SERIAL PRIMARY KEY,
-  transaction_id INTEGER NOT NULL,
-  account_id INTEGER NOT NULL,
-  entry_type VARCHAR(10) NOT NULL,
-  amount NUMERIC(14,2) NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  CONSTRAINT fk_transaction
-    FOREIGN KEY (transaction_id) REFERENCES transactions(id),
-  CONSTRAINT fk_account
-    FOREIGN KEY (account_id) REFERENCES accounts(id)
-);
+\q
 ```
 
-Exit with `\q`. These tables implement accounts, the transaction log, and immutable ledger entries. [web:75][web:81]
-
-### 5. Start the API
+### 4.6 Run the API server
 
 ```
 npm run dev
 ```
 
-The server will start on `http://localhost:3000`. [web:16]
+The API will listen on:
+
+```
+http://localhost:3000
+```
 
 ---
 
-## Data Model
+## 5. Domain and Data Model
 
-### Accounts
+### 5.1 Accounts table
 
-- One row per logical bank account.
-- Fields: `id`, `user_id`, `type` (checking/savings), `currency`, `status` (active/frozen).
-- **No balance column**; balance is always calculated from ledger entries for strong consistency. [web:75]
+- Represents a single bank account.
+- Main columns:
+  - `id` – primary key.
+  - `user_id` – logical user identifier.
+  - `type` – account type (for example `checking` or `savings`).
+  - `currency` – currency code (for example `INR`).
+  - `status` – account status (for example `active`).
+- The `accounts` table does **not** store a balance column.
+- Balance is always computed from related ledger entries for that account.
 
-### Transactions
+### 5.2 Transactions table
 
-- One row per business operation (deposit, withdrawal, transfer).  
-- Fields: `id`, `type`, `amount`, `currency`, `source_account_id`, `destination_account_id`, `status`, `description`, `created_at`.  
-- Used as the parent for ledger entries and to track business status (`pending`, `completed`, `failed`). [web:75][web:91]
+- Represents one logical business operation:
+  - `deposit`
+  - `withdrawal`
+  - `transfer`
+- Main columns:
+  - `id` – primary key.
+  - `type` – operation type.
+  - `amount` – transaction amount.
+  - `currency` – transaction currency.
+  - `source_account_id` – source account (nullable for deposit).
+  - `destination_account_id` – destination account (nullable for withdrawal).
+  - `status` – `pending`, `completed`, or `failed`.
+  - `description` – free‑text description.
+  - `created_at` – timestamp.
+- Acts as the parent record for all ledger entries belonging to that operation.
 
-### Ledger Entries
+### 5.3 Ledger entries table
 
-- Immutable, append-only rows that implement double-entry bookkeeping.  
-- Fields: `id`, `transaction_id`, `account_id`, `entry_type` (`debit` or `credit`), `amount`, `created_at`.  
-- Every transfer creates exactly two entries: one debit and one credit for the same amount. [web:90][web:93]
+- Implements double‑entry bookkeeping.
+- Each row is immutable and represents either:
+  - a **debit** (money leaving an account), or
+  - a **credit** (money entering an account).
+- Main columns:
+  - `id` – primary key.
+  - `transaction_id` – foreign key to `transactions.id`.
+  - `account_id` – foreign key to `accounts.id`.
+  - `entry_type` – `debit` or `credit`.
+  - `amount` – positive numeric amount.
+  - `created_at` – timestamp.
+- Balance for a given account is computed as:
 
-**Balance calculation**:  
-For a given account, balance is computed as:
-
-- credits minus debits over all its ledger entries:
-
-\[
-\text{balance} = \sum(\text{credits}) - \sum(\text{debits})
-\]
-
-This is implemented in SQL using a `CASE` expression over `entry_type`. [web:75][web:90]
+> total of all credit amounts minus total of all debit amounts
 
 ---
 
-## API Endpoints
+## 6. API Endpoints
 
 Base URL: `http://localhost:3000`
 
-### Health
+### 6.1 Health
 
 - `GET /health`  
-  - Returns API status and a simple DB connectivity check.
+  Returns API status and a simple database connectivity check.
 
-### Accounts
+### 6.2 Accounts
 
 - `POST /accounts`  
-  - Body: `{ "userId": "user1", "type": "checking", "currency": "INR" }`  
-  - Creates a new account (status defaults to `active`). [web:55]
+  Creates a new account.  
+  Example JSON body:
+
+  ```
+  {
+    "userId": "user1",
+    "type": "checking",
+    "currency": "INR"
+  }
+  ```
 
 - `GET /accounts/:id`  
-  - Returns account details plus calculated `balance` from ledger entries. [web:75]
+  Returns account details including the calculated balance from ledger entries.
 
 - `GET /accounts/:id/ledger`  
-  - Returns all ledger entries for the account ordered by time.
+  Returns all ledger entries for the account, ordered by creation time.
 
-### Deposits
+### 6.3 Deposits
 
 - `POST /deposits`  
-  - Body: `{ "accountId": 1, "amount": "200.00", "currency": "INR", "description": "initial deposit" }`  
-  - Creates a `deposit` transaction and a **credit** ledger entry for the account. [web:90][web:96]  
-  - Response: transaction details with status `completed`.
+  Creates a `deposit` transaction and a **credit** ledger entry for one account.  
+  Example JSON body:
 
-### Withdrawals
+  ```
+  {
+    "accountId": 1,
+    "amount": "200.00",
+    "currency": "INR",
+    "description": "initial deposit"
+  }
+  ```
+
+### 6.4 Withdrawals
 
 - `POST /withdrawals`  
-  - Body: `{ "accountId": 1, "amount": "50.00", "currency": "INR", "description": "ATM cash" }`  
-  - Creates a `withdrawal` transaction and a **debit** ledger entry.  
-  - Recalculates balance; if it would go negative, transaction is rolled back and the API returns HTTP 422 with `"Insufficient funds"`. [web:111][web:122]
+  Creates a `withdrawal` transaction and a **debit** ledger entry.  
+- After inserting the debit entry, the service recomputes the account balance.
+- If the balance would become negative:
+  - The whole database transaction is rolled back.
+  - The API returns HTTP status `422` with an error message.
 
-### Transfers
+### 6.5 Transfers
 
 - `POST /transfers`  
-  - Body:  
-    `{ "sourceAccountId": 1, "destinationAccountId": 2, "amount": "50.00", "currency": "INR", "description": "test transfer" }`  
-  - Inside a single database transaction:  
-    - Inserts a `transfer` transaction (status `pending`).  
-    - Inserts one **debit** ledger entry for the source and one **credit** ledger entry for the destination with the same amount.  
-    - Recalculates the source balance; if it would be negative, rolls back and returns HTTP 422.  
-    - Otherwise updates transaction status to `completed` and commits. [web:90][web:94][web:100]
+  Moves money between two accounts in a single ACID transaction.  
+- Example JSON body:
+
+  ```
+  {
+    "sourceAccountId": 1,
+    "destinationAccountId": 2,
+    "amount": "50.00",
+    "currency": "INR",
+    "description": "test transfer"
+  }
+  ```
+
+- Steps inside one database transaction:
+  - Insert a `transfer` row into `transactions` with status `pending`.
+  - Insert one **debit** ledger entry for the source account.
+  - Insert one **credit** ledger entry for the destination account.
+  - Recalculate the source account balance.
+  - If the source would go negative, roll back and return HTTP `422`.
+  - Otherwise, mark the transaction as `completed` and commit.
 
 ---
 
-## Business Rules and Error Handling
+## 7. Business Rules and Error Handling
 
-- **Double-entry bookkeeping**: every transfer produces exactly two ledger entries (debit + credit) so debits and credits always balance. [web:90][web:93]  
-- **No negative balances**: withdrawals and transfers that would make the source account negative are rejected with HTTP 422. [web:111][web:122]  
-- **Immutability**: `ledger_entries` are never updated or deleted; only new entries are appended, providing an audit trail. [web:90]  
-- **Error status codes**:  
-  - 400 – invalid input (missing fields, non-positive amounts). [web:104]  
-  - 404 – account not found.  
-  - 422 – business rule violation (insufficient funds). [web:111]  
-  - 500 – unexpected server or database error.
+### 7.1 Core business rules
 
----
+- All transfers follow double‑entry bookkeeping:
+  - exactly one debit and one credit for the same amount.
+- Withdrawals and transfers are blocked if they would make the source account negative.
+- Ledger entries are append‑only:
+  - no `UPDATE` or `DELETE` operations are used on the `ledger_entries` table.
+  - this creates an auditable history of all money movements.
 
-## ACID Properties and Isolation
+### 7.2 Error behaviour
 
-All money-moving endpoints (`/deposits`, `/withdrawals`, `/transfers`) wrap their operations in **explicit PostgreSQL transactions** using `BEGIN`, multiple SQL statements, and `COMMIT` or `ROLLBACK` via `node-postgres`. [web:94][web:100][web:125]
-
-- **Atomicity**: each endpoint executes as a single transaction; partial inserts are rolled back on error. [web:94][web:122]  
-- **Consistency**: foreign keys and balance checks (no negative balances) ensure that only valid states are committed. [web:122][web:127]  
-- **Isolation**: the system relies on PostgreSQL’s default `READ COMMITTED` isolation level to prevent dirty reads; concurrent operations do not see uncommitted data. [web:94][web:125]  
-- **Durability**: once a transaction commits, PostgreSQL guarantees that data is stored durably. [web:94][web:122]
+- Standard HTTP status codes are used:
+  - `400` – invalid input (missing fields, bad types, non‑positive amounts).
+  - `404` – account not found.
+  - `422` – business rule violation (for example insufficient funds).
+  - `500` – unexpected server or database error.
+- Error responses contain a JSON message describing the problem.
 
 ---
 
-## ERD and Architecture (for submission)
+## 8. Transactions, ACID, and Isolation
 
-- **ERD**:  
-  - Show `accounts`, `transactions`, `ledger_entries`.  
-  - Primary keys and foreign keys as described in the Data Model section. [web:75]  
-
-- **Architecture diagram**:  
-  - Client (Postman/Frontend) → Express API (Node.js) → PostgreSQL (Docker container).  
-  - Highlight that money-moving endpoints use DB transactions for ACID behavior. [web:16][web:94]
-The ERD for this project is available at `docs/erd.png`.
-The high-level architecture diagram is available at `docs/architecture.png`.
-
+- Each money‑related endpoint (`/deposits`, `/withdrawals`, `/transfers`) opens a PostgreSQL transaction using:
+  - `BEGIN`
+  - multiple SQL statements
+  - `COMMIT` or `ROLLBACK`
+- ACID properties:
+  - **Atomicity** – all changes for one request either fully succeed or are completely undone.
+  - **Consistency** – foreign keys and validation checks guarantee that only valid account and ledger states are stored.
+  - **Isolation** – relies on PostgreSQL’s default `READ COMMITTED` level so that no request sees uncommitted data from another.
+  - **Durability** – once a transaction is committed, PostgreSQL persists it to disk.
 
 ---
 
-## Testing and Postman Collection
+## 9. Testing with Postman
 
-A Postman collection can be used to demonstrate the flow:
+The repository includes a ready‑to‑use Postman collection:
 
-1. Create two accounts.  
-2. Deposit into account 1.  
-3. Withdraw from account 1 (success and insufficient funds case).  
-4. Transfer from account 1 to account 2 (insufficient funds, then successful).  
-5. Fetch accounts and their ledgers to verify balances and entries. [conversation_history:1]
+- `postman/Financial-Ledger-API.postman_collection.json`
 
-Export this collection (v2.1) and include it with your submission.
+### 9.1 Importing the collection
 
+- Open Postman.
+- Click **Import** and select the JSON file from the `postman` folder.
+- A collection named **Financial Ledger API** appears with pre‑configured requests.
+
+### 9.2 Recommended test flow
+
+1. Call `GET /health` to confirm the API and database are running.
+2. Create two accounts using the `POST /accounts` requests.
+3. Deposit money into account `1` using `POST /deposits`.
+4. Perform a successful withdrawal from account `1`.
+5. Try a large withdrawal from account `1` and verify that it fails with HTTP `422`.
+6. Perform a transfer from account `1` to account `2` and verify:
+   - account `1` is debited,
+   - account `2` is credited,
+   - balances and ledger entries match expectations.
+7. Fetch final account details and ledgers using `GET /accounts/:id` and `GET /accounts/:id/ledger`.
 ```
