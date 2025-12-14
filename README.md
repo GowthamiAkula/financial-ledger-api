@@ -1,4 +1,3 @@
-```md
 # Financial Ledger API (Node.js + PostgreSQL)
 
 This project is a backend REST API for a mock banking system. It manages accounts, deposits, withdrawals, and transfers using a double–entry ledger stored in PostgreSQL. The design ensures every money movement is tracked with balanced debit/credit entries and that account balances never go negative.
@@ -308,4 +307,3 @@ The repository includes a ready‑to‑use Postman collection:
 5. Try a large withdrawal from account `1` and verify that it fails with HTTP `422`.  
 6. Perform a transfer from account `1` to account `2` and verify that balances and ledgers are updated correctly.  
 7. Fetch final account details and ledgers using `GET /accounts/:id` and `GET /accounts/:id/ledger`.
-```
